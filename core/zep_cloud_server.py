@@ -1,68 +1,64 @@
 #!/usr/bin/env python3
-import json
-import logging
+"""
+MCP Server for Zep Cloud
+This server provides tools for Claude Desktop to interact with Zep Cloud API.
+"""
+
 import os
-from typing import Any, Dict, List, Optional
+import json
+import sys
+import logging
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 from zep_cloud_client import ZepCloudClient
+from typing import Optional, Dict, Any, Union
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("ZepCloudServer")
 
 # Load environment variables
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Initialize FastMCP
+mcp = FastMCP("Zep Cloud MCP Server")
 
-# Create the FastMCP app
-app = FastMCP("Zep Cloud MCP Server")
+# Create client
 client = ZepCloudClient()
 
-@app.tool()
-def create_user(user_id: str, email: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> str:
-    """Create a new user in Zep Cloud"""
-    try:
-        result = client.create_user(user_id, email, metadata)
-        return json.dumps(result)
-    except Exception as e:
-        logger.error(f"Error creating user: {e}")
-        return json.dumps({"error": str(e)})
-
-@app.tool()
-def get_user(user_id: str) -> str:
-    """Get user details from Zep Cloud"""
-    try:
-        result = client.get_user(user_id)
-        return json.dumps(result)
-    except Exception as e:
-        logger.error(f"Error getting user: {e}")
-        return json.dumps({"error": str(e)})
-
-@app.tool()
-def search_graph(user_id: str, query: str, limit: int = 10) -> str:
+@mcp.tool()
+def search_memory(user_id: str, query: str, limit: int = 10) -> str:
     """Search user's memory graph in Zep Cloud"""
     try:
         result = client.search_graph(user_id, query, limit)
-        return json.dumps(result)
+        return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error searching graph: {e}")
+        logger.error(f"Error searching memory: {e}")
         return json.dumps({"error": str(e)})
 
-@app.tool()
-def add_graph_data(user_id: str, data: str, data_type: str = "text") -> str:
-    """Add data to user's memory graph in Zep Cloud"""
+@mcp.tool()
+def add_memory(user_id: str, data: str, data_type: str = "text") -> str:
+    """Add data to user's memory graph"""
     try:
         result = client.add_graph_data(user_id, data, data_type)
-        return json.dumps(result)
+        return json.dumps(result, indent=2)
     except Exception as e:
-        logger.error(f"Error adding graph data: {e}")
+        logger.error(f"Error adding memory: {e}")
         return json.dumps({"error": str(e)})
 
-@app.tool()
+@mcp.tool()
 def check_connection() -> str:
-    """Check connection to Zep Cloud API"""
+    """Test Zep Cloud API connection"""
     try:
-        result = client.check_connection()
-        return json.dumps(result)
+        test = client.search_graph("quinn_may", "test", 1)
+        return json.dumps({"status": "connected", "working": True})
     except Exception as e:
-        logger.error(f"Error checking connection: {e}")
-        return json.dumps({"error": str(e)})
+        return json.dumps({"status": "failed", "error": str(e)})
+
+if __name__ == "__main__":
+    logger.info("🧠✨ Starting Zep Memory MCP Server")
+    port = int(os.getenv("PORT", 8080))
+    mcp.run("http", port=port, host="0.0.0.0")
