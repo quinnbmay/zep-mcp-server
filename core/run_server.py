@@ -9,4 +9,4 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     logger.info("Starting Zep Cloud MCP Server...")
     port = int(os.getenv("PORT", 8080))
-    app.run("http", port=port)
+    app.run("http", port=port, host="0.0.0.0")
